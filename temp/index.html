@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>test</title>
+    <link rel="stylesheet" type="text/css" href="reset.css">
+    <style type="text/css">
+    </style>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+  </head>
+  <body>
+    test
+    <script>
+      var socket = io();
+      socket.on('response', function (data) { console.log(JSON.stringify(data)); });
+      socket.on('application action', function (action, data) {
+        console.log(data);
+      });
+    </script>
+  </body>
+</html>
