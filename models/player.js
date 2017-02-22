@@ -13,15 +13,23 @@ var playerSchema = new Schema({
   email: String,
   password: String,
   iconId: Number,
-  blockedPlayers: [{type: Schema.Types.ObjectId, ref: 'Player'}],
+  blockedPlayers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Player'
+  }],
   friends: {
-    pending: [{type: Schema.Types.ObjectId, ref: 'Player'}],
-    request: [{type: Schema.Types.ObjectId, ref: 'Player'}],
-    mutual: [{type: Schema.Types.ObjectId, ref: 'Player'}]
-  },
-  isNew: {
-    type: Boolean,
-    default: true
+    pending: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Player'
+    }],
+    request: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Player'
+    }],
+    mutual: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Player'
+    }]
   },
   isBanned: {
     type: Boolean,
@@ -42,8 +50,14 @@ var playerSchema = new Schema({
     }
   },
   inventory: {
-    cards: [{type: Schema.Types.ObjectId, ref: 'Card'}],
-    decks: [{type: Schema.Types.ObjectId, ref: 'Deck'}]
+    cards: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Card'
+    }],
+    decks: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Deck'
+    }]
   }
 });
 
