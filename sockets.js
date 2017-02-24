@@ -3,18 +3,43 @@ var _ = require('lodash');
 var mongoose = require('mongoose');
 
 var io = require('./app').io;
-var Player = require('./models/player');
+var PlayerModel = require('./models/player');
 
-function ConnectedPlayer (player, socket) {
-  this.playerId = player.playerId;
-  this.name = player.name;
-  this.iconId = player.iconId;
-  this.permissions = player.permissions;
+// --------------------------------------------------
+
+var playersHandler = {
+  players: [],
+  isConnected: function (playerId) {
+    return _.find(this.players, {attributes: {playerId: playerId}}) ? true : false;
+  },
+  get: function (playerId) {
+    return _.find(this.players, {attributes: {playerId: playerId}});
+  }
+};
+
+var Player = function (player_attributes, socket) {
+  this.attributes = player_attributes;
   this.socket = socket;
-}
+};
+
+// Conectar jugador
+Player.prototype.connect = function () {
+  console.log(`DEBUG: Conectando jugador ID: ${this.attributes.playerId}`);
+  playersHandler.players.push(this);
+  io.sockets.emit('APPLICATION_ACTION', 'UPDATE_CPL', null); // Poner LDJ como tercer parametro.
+};
+
+// Desconectar jugador
+Player.prototype.disconnect = function () {
+  console.log(`DEBUG: Desconectando jugador ID: ${this.attributes.playerId}`);
+  _.remove(playersHandler.players, {attributes: {playerId: this.attributes.playerId}});
+  io.sockets.emit('APPLICATION_ACTION', 'UPDATE_CPL', null); // Poner LDJ como tercer parametro.
+};
+
+// --------------------------------------------------
 
 io.on('connection', function (socket) {
-  socket.on('anonymous action', function (action, data) {
+  socket.on('ANONYMOUS_ACTION', function (action, data) {
     if (socket.session) {
       socket.emit('response', {
         success: false,
@@ -23,33 +48,23 @@ io.on('connection', function (socket) {
     } else {
       switch (action) {
         case 'LOGIN': {
-          Player.findOne({loginId: new RegExp(`^${data.loginId}$`, 'i')}, function (err, player) {
+          PlayerModel.findOne({loginId: new RegExp(`^${data.loginId}$`, 'i')}, function (err, player) {
             if (err) throw err;
 
             if (player) {
               if (data.password === player.password) {
-                if (player.status.isBanned) {
+                if (player.isBanned) {
                   socket.emit('response', {
                     success: false,
                     errorCode: 4
                   });
                 } else {
-                  _.each(io.sockets.connected, function (socket) {
-                    if (socket.session) {
-                      if (socket.session.player.playerId === player.playerId) {
-                        socket.disconnect();
-                        return false;
-                      }
-                    }
-                  });
-
-                  socket.session = {
-                    player: new ConnectedPlayer(_.pick(player, ['playerId', 'name', 'iconId', 'permissions']), socket)
-                  };
-
-                  io.emit('application action', 'UPDATE_CPL', _.map(io.sockets.connected, function (socket) {
-                    if (socket.session) return _.omit(socket.session.player, ['permissions', 'socket']);
-                  }));
+                  if (playersHandler.isConnected(player.playerId)) playersHandler.get(player.playerId).socket.disconnect();
+                  // Pulir >
+                  var p = new Player({playerId: player.playerId}, socket);
+                  p.connect();
+                  socket.session = {player: p};
+                  // <
 
                   socket.emit('response', {
                     success: true,
@@ -81,7 +96,7 @@ io.on('connection', function (socket) {
             if (validator.isEmpty(data.loginId)) reject(1);
             else {
               if (validator.isAlphanumeric(data.loginId) && validator.isLength(data.loginId, {min: 6, max: 16})) {
-                Player.findOne({loginId: new RegExp(`^${data.loginId}$`, 'i')}, function (err, player) {
+                PlayerModel.findOne({loginId: new RegExp(`^${data.loginId}$`, 'i')}, function (err, player) {
                   if (err) throw err;
                   player ? reject(3) : resolve();
                 });
@@ -95,7 +110,7 @@ io.on('connection', function (socket) {
             if (validator.isEmpty(data.name)) reject(1);
             else {
               if (validator.matches(data.name, /^[0-9a-zA-Z]+([\s|_]{1}[0-9a-zA-Z]+)?$/) && validator.isLength(data.name, {min: 4, max: 16})) {
-                Player.findOne({name: new RegExp(`^${data.name}$`, 'i')}, function (err, player) {
+                PlayerModel.findOne({name: new RegExp(`^${data.name}$`, 'i')}, function (err, player) {
                   if (err) throw err;
                   player ? reject(3) : resolve();
                 });
@@ -111,7 +126,7 @@ io.on('connection', function (socket) {
               if (validator.isEmail(data.email)) {
                 data.email = validator.normalizeEmail(data.email);
 
-                Player.findOne({email: data.email}, function (err, player) {
+                PlayerModel.findOne({email: data.email}, function (err, player) {
                   if (err) throw err;
                   player ? reject(3) : resolve();
                 });
@@ -130,7 +145,7 @@ io.on('connection', function (socket) {
 
           Promise.all([loginIdValidationPromise, nameValidationPromise, emailValidationPromise]).then(function () {
             if (_.isEmpty(errorFields)) {
-              var player = new Player({
+              var player = new PlayerModel({
                 loginId: data.loginId,
                 name: data.name,
                 email: data.email,
@@ -158,7 +173,7 @@ io.on('connection', function (socket) {
         }
 
         case 'REMOVE_MODEL': { // temp
-          Player.remove(function (err) {
+          PlayerModel.remove(function (err) {
             if (err) throw err;
           });
         }
@@ -166,7 +181,7 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('player action', function (action, data) {
+  socket.on('PLAYER_ACTION', function (action, data) {
     if (socket.session) {
       switch (action) {
         //
@@ -179,7 +194,7 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('administrator action', function (action, data) {
+  socket.on('ADMINISTRATOR_ACTION', function (action, data) {
     if (socket.session) {
       if (socket.session.player.permissions === 3) {
         switch (action) {
@@ -199,7 +214,7 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('moderator action', function (action, data) {
+  socket.on('MODERATOR_ACTION', function (action, data) {
     if (socket.session) {
       if (socket.session.player.permissions >= 2) {
         switch (action) {
@@ -219,13 +234,11 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('application action', function (action, data) {});
+  socket.on('APPLICATION_ACTION', function (action, data) {});
 
   socket.on('disconnect', function () {
     if (socket.session) {
-      io.emit('application action', 'UPDATE_CPL', _.map(io.sockets.connected, function (socket) {
-        if (socket.session) return _.omit(socket.session.player, ['permissions', 'socket']);
-      }));
+      socket.session.player.disconnect();
     }
   });
 });

@@ -15,6 +15,9 @@
       socket.on('application action', function (action, data) {
         console.log(data);
       });
+      socket.on('disconnect', function () {
+        alert('desconectado!');
+      });
     </script>
   </body>
 </html>
