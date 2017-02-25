@@ -5,7 +5,7 @@ var mongoose = require('mongoose');
 var io = require('./app').io;
 var PlayerModel = require('./models/player');
 
-// --------------------------------------------------
+// ---------- //
 
 var playersHandler = {
   players: [],
@@ -36,7 +36,7 @@ Player.prototype.disconnect = function () {
   io.sockets.emit('APPLICATION_ACTION', 'UPDATE_CPL', null); // Poner LDJ como tercer parametro.
 };
 
-// --------------------------------------------------
+// ---------- //
 
 io.on('connection', function (socket) {
   socket.on('ANONYMOUS_ACTION', function (action, data) {
@@ -60,11 +60,8 @@ io.on('connection', function (socket) {
                   });
                 } else {
                   if (playersHandler.isConnected(player.playerId)) playersHandler.get(player.playerId).socket.disconnect();
-                  // Pulir >
-                  var p = new Player({playerId: player.playerId}, socket);
-                  p.connect();
-                  socket.session = {player: p};
-                  // <
+                  socket.player = new Player(_.pick(player, ['playerId', 'name', 'iconId', 'permissions']), socket);
+                  socket.player.connect();
 
                   socket.emit('response', {
                     success: true,
@@ -237,8 +234,6 @@ io.on('connection', function (socket) {
   socket.on('APPLICATION_ACTION', function (action, data) {});
 
   socket.on('disconnect', function () {
-    if (socket.session) {
-      socket.session.player.disconnect();
-    }
+    if (socket.player) socket.player.disconnect();
   });
 });
