@@ -26,21 +26,21 @@ var Player = function (player_attributes, socket) {
 Player.prototype.connect = function () {
   console.log(`DEBUG: Conectando jugador ID: ${this.attributes.playerId}`);
   playersHandler.players.push(this);
-  io.sockets.emit('APPLICATION_ACTION', 'UPDATE_CPL', null); // Poner LDJ como tercer parametro.
+  io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
 };
 
 // Desconectar jugador
 Player.prototype.disconnect = function () {
   console.log(`DEBUG: Desconectando jugador ID: ${this.attributes.playerId}`);
   _.remove(playersHandler.players, {attributes: {playerId: this.attributes.playerId}});
-  io.sockets.emit('APPLICATION_ACTION', 'UPDATE_CPL', null); // Poner LDJ como tercer parametro.
+  io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
 };
 
 // ---------- //
 
 io.on('connection', function (socket) {
-  socket.on('ANONYMOUS_ACTION', function (action, data) {
-    if (socket.session) {
+  socket.on('anonymous action', function (action, data) {
+    if (socket.player) {
       socket.emit('response', {
         success: false,
         errorCode: 1
@@ -178,8 +178,8 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('PLAYER_ACTION', function (action, data) {
-    if (socket.session) {
+  socket.on('player action', function (action, data) {
+    if (socket.player) {
       switch (action) {
         //
       }
@@ -191,9 +191,9 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('ADMINISTRATOR_ACTION', function (action, data) {
-    if (socket.session) {
-      if (socket.session.player.permissions === 3) {
+  socket.on('administrator action', function (action, data) {
+    if (socket.player) {
+      if (socket.player.attributes.permissions === 3) {
         switch (action) {
           //
         }
@@ -211,9 +211,9 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('MODERATOR_ACTION', function (action, data) {
-    if (socket.session) {
-      if (socket.session.player.permissions >= 2) {
+  socket.on('moderator action', function (action, data) {
+    if (socket.player) {
+      if (socket.player.attributes.permissions >= 2) {
         switch (action) {
           //
         }
@@ -231,7 +231,7 @@ io.on('connection', function (socket) {
     }
   });
 
-  socket.on('APPLICATION_ACTION', function (action, data) {});
+  socket.on('application action', function (action, data) {});
 
   socket.on('disconnect', function () {
     if (socket.player) socket.player.disconnect();
