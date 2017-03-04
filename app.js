@@ -1,9 +1,12 @@
-var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var mongoose = require('mongoose');
-var autoIncrement = require('mongoose-auto-increment');
-var Promise = require('bluebird');
+'use strict';
+
+const express = require('express');
+const app = express();
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
+const mongoose = require('mongoose');
+const autoIncrement = require('mongoose-auto-increment');
+const Promise = require('bluebird');
 
 exports.io = io;
 
@@ -19,5 +22,6 @@ autoIncrement.initialize(mongoose.connection);
 
 exports.autoIncrement = autoIncrement;
 
+app.use(express.static('temp')); // temp
 app.use('/', require('./temp/router')); // temp
 require('./sockets');

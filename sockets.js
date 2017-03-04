@@ -1,40 +1,42 @@
-var validator = require('validator');
-var _ = require('lodash');
-var mongoose = require('mongoose');
+'use strict';
 
-var io = require('./app').io;
-var PlayerModel = require('./models/player');
+const validator = require('validator');
+const _ = require('lodash');
+const mongoose = require('mongoose');
+
+const io = require('./app').io;
+const PlayerModel = require('./models/player');
 
 // ---------- //
 
-var playersHandler = {
+const playersHandler = {
   players: [],
-  isConnected: function (playerId) {
+  isConnected (playerId) {
     return _.find(this.players, {attributes: {playerId: playerId}}) ? true : false;
   },
-  get: function (playerId) {
+  get (playerId) {
     return _.find(this.players, {attributes: {playerId: playerId}});
   }
 };
 
-var Player = function (player_attributes, socket) {
-  this.attributes = player_attributes;
-  this.socket = socket;
-};
+class Player {
+  constructor (attributes, socket) {
+    this.attributes = attributes;
+    this.socket = socket;
+  }
 
-// Conectar jugador
-Player.prototype.connect = function () {
-  console.log(`DEBUG: Conectando jugador ID: ${this.attributes.playerId}`);
-  playersHandler.players.push(this);
-  io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
-};
+  connect () { // Conectar jugador
+    console.log(`DEBUG: Conectando jugador ID: ${this.attributes.playerId}`);
+    playersHandler.players.push(this);
+    io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
+  }
 
-// Desconectar jugador
-Player.prototype.disconnect = function () {
-  console.log(`DEBUG: Desconectando jugador ID: ${this.attributes.playerId}`);
-  _.remove(playersHandler.players, {attributes: {playerId: this.attributes.playerId}});
-  io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
-};
+  disconnect () { // Desconectar jugador
+    console.log(`DEBUG: Desconectando jugador ID: ${this.attributes.playerId}`);
+    _.remove(playersHandler.players, {attributes: {playerId: this.attributes.playerId}});
+    io.sockets.emit('application action', 'UPDATE_CPL', _.omit(this.attributes, ['permissions']));
+  }
+}
 
 // ---------- //
 
@@ -87,9 +89,9 @@ io.on('connection', function (socket) {
         }
 
         case 'REGISTER': {
-          var errorFields = [];
+          const errorFields = [];
 
-          var loginIdValidationPromise = new Promise(function (resolve, reject) {
+          const loginIdValidationPromise = new Promise(function (resolve, reject) {
             if (validator.isEmpty(data.loginId)) reject(1);
             else {
               if (validator.isAlphanumeric(data.loginId) && validator.isLength(data.loginId, {min: 6, max: 16})) {
@@ -103,7 +105,7 @@ io.on('connection', function (socket) {
             errorFields.push({name: 'loginId', errorCode: errorCode});
           });
 
-          var nameValidationPromise = new Promise(function (resolve, reject) {
+          const nameValidationPromise = new Promise(function (resolve, reject) {
             if (validator.isEmpty(data.name)) reject(1);
             else {
               if (validator.matches(data.name, /^[0-9a-zA-Z]+([\s|_]{1}[0-9a-zA-Z]+)?$/) && validator.isLength(data.name, {min: 4, max: 16})) {
@@ -117,7 +119,7 @@ io.on('connection', function (socket) {
             errorFields.push({name: 'name', errorCode: errorCode});
           });
 
-          var emailValidationPromise = new Promise(function (resolve, reject) {
+          const emailValidationPromise = new Promise(function (resolve, reject) {
             if (validator.isEmpty(data.email)) reject(1);
             else {
               if (validator.isEmail(data.email)) {
@@ -142,7 +144,7 @@ io.on('connection', function (socket) {
 
           Promise.all([loginIdValidationPromise, nameValidationPromise, emailValidationPromise]).then(function () {
             if (_.isEmpty(errorFields)) {
-              var player = new PlayerModel({
+              const player = new PlayerModel({
                 loginId: data.loginId,
                 name: data.name,
                 email: data.email,
